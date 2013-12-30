@@ -1,0 +1,28 @@
+.board-col {
+    width: 80px;
+}
+
+.board-row {
+    height: 80px;
+}
+
+.board-cell {
+    background: url(../img/board-cell.png);
+    background-size: 80px 80px;
+}
+
+.piece {
+    border-radius: 50%;
+    width: 78px;
+    height: 78px;
+    position: relative;
+    z-index: -1;
+}
+
+.red-piece {
+    background-color: red;
+}
+
+.black-piece {
+    background-color: black;
+}
