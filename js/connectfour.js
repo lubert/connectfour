@@ -12,170 +12,281 @@
 
  */
 
-var board_model = [];
-var player_turn = 1;
-var anim_queue = $({});
-//board_model[35] = 1;
+var ConnectFour = (function (document) {
+    'use strict';
 
-/**
- * dropPiece
- *
- *
- * @param col_id
- * @param player
- * @returns position of drop
- */
-function dropPiece(col_id, player) {
-    for (var i = col_id + 35; i > 0; i -= 7) {
-        if (!board_model[i]) {
-            board_model[i] = player;
-            return i;
-        }
+    var ConnectFour = function (div) {
+        this.boardDiv = div;
+        this.newGame();
+    };
+
+    ConnectFour.prototype.newGame = function () {
+        this.boardDiv.innerHTML = '';
+        this.boardModel = [];
+        this.boardView = [];
+        this.playerTurn = [];
+        this.gameOver = false;
+        this.initBoard();
     }
-}
 
-function togglePlayer() {
-    player_turn = player_turn === 1 ? 2 : 1;
-}
+    ConnectFour.prototype.initBoard = function () {
+        var self = this;
 
-function checkWinner(board_model) {
-    for (var i = 0; i < board_model.length; i++) {
-        for (var j = 1; j <= 2; j++) {
-            // check vertical
-            if (i <= 20) {
-                if (board_model[i] === j && board_model[i + 7] === j && board_model[i + 14] === j && board_model[i + 21] === j) {
-                    alert('player ' + j + ' is the winner!');
-                    return true;
-                }
-            }
-            // check horizontal
-            if (i % 7 <= 3) {
-                if (board_model[i] === j && board_model[i + 1] === j && board_model[i + 2] === j && board_model[i + 3] === j) {
-                    alert('player ' + j + ' is the winner!');
-                    return true;
-                }
-            }
-            // check diagonal down right
-            if (i % 7 <= 3 && i <= 20) {
-                if (board_model[i] === j && board_model[i + 8] === j && board_model[i + 16] === j && board_model[i + 24] === j) {
-                    alert('player ' + j + ' is the winner!');
-                    return true;
-                }
-            }
+        var table = document.createElement('table');
+        table.className = 'board-table';
 
-            // check diagonal down left
-            if ((i % 7 >= 3 && i <= 20)) {
-                if (board_model[i] === j && board_model[i + 6] === j && board_model[i + 12] === j && board_model[i + 18] === j) {
-                    alert('player ' + j + ' is the winner!');
-                    return true;
+        var colgroup = document.createElement('colgroup');
+        var tbody = document.createElement('tbody');
+
+        // create table columns
+        for (var i = 0; i < 7; i++) {
+            var col = document.createElement('col');
+            col.className = 'board-col';
+            colgroup.appendChild(col);
+        }
+
+        // create drop row
+        var top = document.createElement('tr');
+        top.className = 'board-row';
+        for (var i = 0; i < 7; i++) {
+            var td = document.createElement('td');
+            td.id = 'top' + i;
+
+            // on hover effect
+            $(td).hover(function () {
+                if (!self.gameOver && !document.getElementById('activePiece')) {
+                    var piece = document.createElement('div');
+                    piece.id = 'activePiece';
+                    piece.className = self.playerTurn === 1 ? 'piece red-piece' : 'piece black-piece';
+                    $(this).append(piece);
                 }
+                self.move('#activePiece', $(this), false);
+            }, null);
+
+
+            // on click animation
+            $(td).click(function () {
+                if (!self.gameOver && document.getElementById('activePiece')) {
+                    var col = parseInt($(this).attr('id').substring(3));
+                    var target = self.getOpenCell(col);
+                    if (target != -1) {
+                        document.getElementById('activePiece').id = 'moving';
+                        self.togglePlayer();
+                        self.boardModel[target] = self.playerTurn;
+                        self.checkWinner(function (hasWinner, player) {
+                            if (hasWinner) {
+                                self.gameOver = true;
+                                self.move('#moving', '#' + target, true, function (element) {
+                                    element.removeAttr('id');
+                                    alert('Player ' + player + ' has won!');
+                                });
+                            } else {
+                                self.checkFull(function (isFull) {
+                                    if (isFull) {
+                                        self.gameOver = true;
+                                        self.move('#moving', '#' + target, true, function (element) {
+                                            element.removeAttr('id');
+                                            alert('Tie!');
+                                        });
+                                    } else {
+                                        self.move('#moving', '#' + target, true, function (element) {
+                                            element.removeAttr('id');
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+
+            top.appendChild(td);
+        }
+        tbody.appendChild(top);
+
+        // create rows and cells
+        var cell_id = 0;
+        for (var i = 0; i < 6; i++) {
+            var tr = document.createElement('tr');
+
+            tr.className = 'board-row';
+
+            for (var j = 0; j < 7; j++) {
+                // add id according to representation
+                var td = document.createElement('td');
+                td.id = cell_id;
+                cell_id++;
+
+                td.className = 'board-cell';
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+        table.appendChild(colgroup);
+        table.appendChild(tbody);
+        this.boardDiv.appendChild(table);
+    };
+
+    ConnectFour.prototype.getOpenCell = function (col_id) {
+        for (var i = col_id + 35; i >= 0; i -= 7) {
+            if (!this.boardModel[i]) {
+                this.boardModel[i] = this.playerTurn;
+                return i;
             }
         }
-    }
-}
+        return -1;
+    };
 
-//alert(dropPiece(0));
+    ConnectFour.prototype.move = function (element, newParent, isAnimated, callback) {
+        element = $(element);
+        newParent = $(newParent);
+        if (isAnimated) {
+            var oldOffset = element.offset();
+            element.appendTo(newParent);
+            var newOffset = element.offset();
 
-function move(element, newParent, isAnimated, callback) {
-    element = $(element); //Allow passing in either a JQuery object or selector
-    newParent = $(newParent); //Allow passing in either a JQuery object or selector
-    if (isAnimated) {
-        var oldOffset = element.offset();
-        element.appendTo(newParent);
-        var newOffset = element.offset();
-
-        var temp = element.clone().appendTo('body');
-        temp.css('position', 'absolute')
-            .css('left', oldOffset.left)
-            .css('top', oldOffset.top)
-        element.hide();
-        temp.animate({'top': newOffset.top, 'left': newOffset.left}, 'slow', function () {
-            element.show();
-            temp.remove();
+            var temp = element.clone().appendTo('body');
+            temp.css('position', 'absolute')
+                .css('left', oldOffset.left)
+                .css('top', oldOffset.top)
+            element.hide();
+            temp.animate({'top': newOffset.top, 'left': newOffset.left}, 'slow', function () {
+                element.show();
+                temp.remove();
+                if (callback) {
+                    callback(element);
+                }
+            });
+        } else {
+            element.appendTo(newParent);
             if (callback) {
                 callback(element);
             }
-        });
-    } else {
-        element.appendTo(newParent);
-        if (callback) {
-            callback(element);
         }
-    }
-}
+    };
 
-function createBoard() {
-    var board = document.getElementById('board');
-    var tbl = document.createElement('table');
-    tbl.style['border-spacing'] = 0;
-    var colgrp = document.createElement('colgroup');
-    var tbdy = document.createElement('tbody');
+    ConnectFour.prototype.togglePlayer = function () {
+        this.playerTurn = this.playerTurn === 1 ? 2 : 1;
+    };
 
-    // create columns
-    for (var i = 0; i < 7; i++) {
-        var col = document.createElement('col');
-        col.className = 'board-col';
-        colgrp.appendChild(col);
-    }
+    ConnectFour.prototype.checkWinner = function (callback) {
+        var boardModel = this.boardModel;
 
-    // create drop zone
-    var top = document.createElement('tr');
-    top.className = 'board-row';
-    for (var i = 0; i < 7; i++) {
-        var td = document.createElement('td');
-        td.id = 'top' + i;
+        for (var i = 0; i < boardModel.length; i++) {
+            for (var player = 1; player <= 2; player++) {
+                // check vertical
+                if (i <= 20) {
+                    if (boardModel[i] === player && boardModel[i + 7] === player && boardModel[i + 14] === player && boardModel[i + 21] === player) {
+                        callback(true, player);
+                    }
+                }
+                // check horizontal
+                if (i % 7 <= 3) {
+                    if (boardModel[i] === player && boardModel[i + 1] === player && boardModel[i + 2] === player && boardModel[i + 3] === player) {
+                        callback(true, player);
+                    }
+                }
+                // check diagonal down right
+                if (i % 7 <= 3 && i <= 20) {
+                    if (boardModel[i] === player && boardModel[i + 8] === player && boardModel[i + 16] === player && boardModel[i + 24] === player) {
+                        callback(true, player);
+                    }
+                }
 
-        // hover
-        $(td).hover(function () {
-            if (!document.getElementById('new')) {
-                var piece = document.createElement('div');
-                piece.id = 'new';
-                piece.className = player_turn === 1 ? 'piece red-piece' : 'piece black-piece';
-                $(this).append(piece);
+                // check diagonal down left
+                if ((i % 7 >= 3 && i <= 20)) {
+                    if (boardModel[i] === player && boardModel[i + 6] === player && boardModel[i + 12] === player && boardModel[i + 18] === player) {
+                        callback(true, player);
+                    }
+                }
             }
-            move('#new', $(this), false);
-        }, null);
+        }
+        callback(false);
+    };
 
+    ConnectFour.prototype.checkFull = function (callback) {
+        var isFull = true;
+        for (var i = 0; i < 42; i++) {
+            if (!this.boardModel[i]) {
+                isFull = false;
+                break;
+            }
+        }
+        callback(isFull);
+    };
 
-        // click
-        $(td).click(function () {
-            document.getElementById('new').id = 'moving';
-            togglePlayer();
-            var col = parseInt($(this).attr('id').substring(3));
-            var target = dropPiece(col);
-            move('#moving', '#' + target, true, function (element) {
-                board_model[target] = player_turn;
-                element.removeAttr('id');
-                checkWinner(board_model);
-            });
-        });
-
-        top.appendChild(td);
-    }
-    tbdy.appendChild(top);
-
-    // create rows and cells
-    var cell_id = 0;
-    for (var i = 0; i < 6; i++) {
-        var tr = document.createElement('tr');
-
-        tr.className = 'board-row';
-
-        for (var j = 0; j < 7; j++) {
-            // add id according to representation
-            var td = document.createElement('td');
-            td.id = cell_id;
-            cell_id++;
-
-            td.className = 'board-cell';
-            tr.appendChild(td);
+    ConnectFour.prototype.runTests = function () {
+        var assert = function (condition, success, err) {
+            if (!condition) {
+                throw err;
+            } else {
+                console.log(success);
+            }
         }
 
-        tbdy.appendChild(tr);
-    }
-    tbl.appendChild(colgrp);
-    tbl.appendChild(tbdy);
-    board.appendChild(tbl)
-}
+        // Test 1 - Empty
+        this.boardModel = [];
+        this.checkWinner(function(hasWinner) {
+            assert(hasWinner === false, 'Test 1: passed', 'Test 1: failed');
+        });
 
-createBoard();
+        // Test 2 - Vertical 1
+        this.boardModel =
+            [   0,  0,  0,  0,  0,  0,  0,
+                0,  0,  0,  0,  0,  0,  0,
+                1,  0,  0,  0,  0,  0,  0,
+                1,  0,  0,  0,  0,  0,  0,
+                1,  0,  0,  0,  0,  0,  0,
+                1,  0,  0,  0,  0,  0,  0
+            ];
+        this.checkWinner(function(hasWinner) {
+            assert(hasWinner === true, 'Test 2: passed', 'Test 2: failed');
+        });
+
+        // Test 3 - Vertical 2
+        this.boardModel =
+            [   1,  0,  0,  0,  0,  0,  0,
+                1,  0,  0,  0,  0,  0,  0,
+                1,  0,  0,  0,  0,  0,  0,
+                1,  0,  0,  0,  0,  0,  0,
+                0,  0,  0,  0,  0,  0,  0,
+                0,  0,  0,  0,  0,  0,  0
+            ];
+        this.checkWinner(function(hasWinner) {
+            assert(hasWinner === true, 'Test 3: passed', 'Test 3: failed');
+        });
+
+        // Test 4 - Vertical 3
+        this.boardModel =
+            [   0,  0,  0,  0,  0,  0,  1,
+                0,  0,  0,  0,  0,  0,  1,
+                0,  0,  0,  0,  0,  0,  1,
+                0,  0,  0,  0,  0,  0,  1,
+                0,  0,  0,  0,  0,  0,  0,
+                0,  0,  0,  0,  0,  0,  0
+            ];
+        this.checkWinner(function(hasWinner) {
+            assert(hasWinner === true, 'Test 4: passed', 'Test 4: failed');
+        });
+
+        // Test 5 - Vertical 4
+        this.boardModel =
+            [   0,  0,  0,  0,  0,  0,  0,
+                0,  0,  0,  0,  0,  0,  0,
+                0,  0,  0,  0,  0,  0,  1,
+                0,  0,  0,  0,  0,  0,  1,
+                0,  0,  0,  0,  0,  0,  1,
+                0,  0,  0,  0,  0,  0,  1
+            ];
+        this.checkWinner(function(hasWinner) {
+            assert(hasWinner === true, 'Test 5: passed', 'Test 5: failed');
+        });
+
+        this.newGame();
+        
+        // test horizontal
+
+    }
+
+    return ConnectFour;
+})(document);
