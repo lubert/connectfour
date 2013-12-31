@@ -5,13 +5,17 @@
     <title>Space Demo</title>
     <link href="css/connectfour.css" media="all" rel="stylesheet" type="text/css"/>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="js/connectfour.js"></script>
+    <script src="js/connectfour-tests.js"></script>
 </head>
 <body>
-<h1>Connect Four</h1>
+<h1>Connect Four</h1><input type="button" value="New Game" onclick="connectFour.newGame();">
 
 <div id="board"></div>
 
-
-<script src="js/connectfour.js"></script>
+<script type="text/javascript">
+    var boardDiv = document.getElementById('board');
+    var connectFour = new ConnectFour(boardDiv);
+</script>
 </body>
 </html>

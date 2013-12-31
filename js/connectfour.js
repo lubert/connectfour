@@ -21,12 +21,14 @@ var ConnectFour = (function (document) {
     };
 
     ConnectFour.prototype.newGame = function () {
-        this.boardDiv.innerHTML = '';
         this.boardModel = [];
         this.boardView = [];
         this.playerTurn = [];
         this.gameOver = false;
-        this.initBoard();
+        if(this.boardDiv) { // can be null for testing
+            this.boardDiv.innerHTML = '';
+            this.initBoard();
+        }
     }
 
     ConnectFour.prototype.initBoard = function () {
@@ -73,29 +75,27 @@ var ConnectFour = (function (document) {
                         document.getElementById('activePiece').id = 'moving';
                         self.togglePlayer();
                         self.boardModel[target] = self.playerTurn;
-                        self.checkWinner(function (hasWinner, player) {
-                            if (hasWinner) {
+                        var winner = self.checkWinner();
+                        if (winner) {
+                            self.gameOver = true;
+                            self.move('#moving', '#' + target, true, function (element) {
+                                element.removeAttr('id');
+                                alert('Player ' + winner + ' has won!');
+                            });
+                        } else {
+                            var isFull = self.checkFull();
+                            if (isFull) {
                                 self.gameOver = true;
                                 self.move('#moving', '#' + target, true, function (element) {
                                     element.removeAttr('id');
-                                    alert('Player ' + player + ' has won!');
+                                    alert('Tie!');
                                 });
                             } else {
-                                self.checkFull(function (isFull) {
-                                    if (isFull) {
-                                        self.gameOver = true;
-                                        self.move('#moving', '#' + target, true, function (element) {
-                                            element.removeAttr('id');
-                                            alert('Tie!');
-                                        });
-                                    } else {
-                                        self.move('#moving', '#' + target, true, function (element) {
-                                            element.removeAttr('id');
-                                        });
-                                    }
+                                self.move('#moving', '#' + target, true, function (element) {
+                                    element.removeAttr('id');
                                 });
                             }
-                        });
+                        }
                     }
                 }
             });
@@ -169,7 +169,7 @@ var ConnectFour = (function (document) {
         this.playerTurn = this.playerTurn === 1 ? 2 : 1;
     };
 
-    ConnectFour.prototype.checkWinner = function (callback) {
+    ConnectFour.prototype.checkWinner = function () {
         var boardModel = this.boardModel;
 
         for (var i = 0; i < boardModel.length; i++) {
@@ -177,34 +177,34 @@ var ConnectFour = (function (document) {
                 // check vertical
                 if (i <= 20) {
                     if (boardModel[i] === player && boardModel[i + 7] === player && boardModel[i + 14] === player && boardModel[i + 21] === player) {
-                        callback(true, player);
+                        return player;
                     }
                 }
                 // check horizontal
                 if (i % 7 <= 3) {
                     if (boardModel[i] === player && boardModel[i + 1] === player && boardModel[i + 2] === player && boardModel[i + 3] === player) {
-                        callback(true, player);
+                        return player;
                     }
                 }
                 // check diagonal down right
                 if (i % 7 <= 3 && i <= 20) {
                     if (boardModel[i] === player && boardModel[i + 8] === player && boardModel[i + 16] === player && boardModel[i + 24] === player) {
-                        callback(true, player);
+                        return player;
                     }
                 }
 
                 // check diagonal down left
                 if ((i % 7 >= 3 && i <= 20)) {
                     if (boardModel[i] === player && boardModel[i + 6] === player && boardModel[i + 12] === player && boardModel[i + 18] === player) {
-                        callback(true, player);
+                        return player;
                     }
                 }
             }
         }
-        callback(false);
+        return 0;
     };
 
-    ConnectFour.prototype.checkFull = function (callback) {
+    ConnectFour.prototype.checkFull = function () {
         var isFull = true;
         for (var i = 0; i < 42; i++) {
             if (!this.boardModel[i]) {
@@ -212,80 +212,11 @@ var ConnectFour = (function (document) {
                 break;
             }
         }
-        callback(isFull);
+        return isFull;
     };
 
-    ConnectFour.prototype.runTests = function () {
-        var assert = function (condition, success, err) {
-            if (!condition) {
-                throw err;
-            } else {
-                console.log(success);
-            }
-        }
-
-        // Test 1 - Empty
-        this.boardModel = [];
-        this.checkWinner(function(hasWinner) {
-            assert(hasWinner === false, 'Test 1: passed', 'Test 1: failed');
-        });
-
-        // Test 2 - Vertical 1
-        this.boardModel =
-            [   0,  0,  0,  0,  0,  0,  0,
-                0,  0,  0,  0,  0,  0,  0,
-                1,  0,  0,  0,  0,  0,  0,
-                1,  0,  0,  0,  0,  0,  0,
-                1,  0,  0,  0,  0,  0,  0,
-                1,  0,  0,  0,  0,  0,  0
-            ];
-        this.checkWinner(function(hasWinner) {
-            assert(hasWinner === true, 'Test 2: passed', 'Test 2: failed');
-        });
-
-        // Test 3 - Vertical 2
-        this.boardModel =
-            [   1,  0,  0,  0,  0,  0,  0,
-                1,  0,  0,  0,  0,  0,  0,
-                1,  0,  0,  0,  0,  0,  0,
-                1,  0,  0,  0,  0,  0,  0,
-                0,  0,  0,  0,  0,  0,  0,
-                0,  0,  0,  0,  0,  0,  0
-            ];
-        this.checkWinner(function(hasWinner) {
-            assert(hasWinner === true, 'Test 3: passed', 'Test 3: failed');
-        });
-
-        // Test 4 - Vertical 3
-        this.boardModel =
-            [   0,  0,  0,  0,  0,  0,  1,
-                0,  0,  0,  0,  0,  0,  1,
-                0,  0,  0,  0,  0,  0,  1,
-                0,  0,  0,  0,  0,  0,  1,
-                0,  0,  0,  0,  0,  0,  0,
-                0,  0,  0,  0,  0,  0,  0
-            ];
-        this.checkWinner(function(hasWinner) {
-            assert(hasWinner === true, 'Test 4: passed', 'Test 4: failed');
-        });
-
-        // Test 5 - Vertical 4
-        this.boardModel =
-            [   0,  0,  0,  0,  0,  0,  0,
-                0,  0,  0,  0,  0,  0,  0,
-                0,  0,  0,  0,  0,  0,  1,
-                0,  0,  0,  0,  0,  0,  1,
-                0,  0,  0,  0,  0,  0,  1,
-                0,  0,  0,  0,  0,  0,  1
-            ];
-        this.checkWinner(function(hasWinner) {
-            assert(hasWinner === true, 'Test 5: passed', 'Test 5: failed');
-        });
-
-        this.newGame();
-        
-        // test horizontal
-
+    ConnectFour.prototype.setBoardModel = function (boardModel) {
+        this.boardModel = boardModel;
     }
 
     return ConnectFour;
