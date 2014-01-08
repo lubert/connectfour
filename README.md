@@ -1,6 +1,6 @@
 # connectfour.js
 
-Connect Four game implemented using jQuery, JavaScript, and CSS.  This was a programming assignment for a job interview.
+Connect Four game implemented using jQuery, JavaScript, and CSS.
 
 ## Usage ##
     <link href="css/connectfour.css" media="all" rel="stylesheet" type="text/css"/>
